@@ -1,7 +1,11 @@
 <?php 
 session_start();
 require_once '../config/config.php';
+require_once '../includes/auth.php';
 include '../components/Menu.php';
+
+// ตรวจสอบสิทธิ์การเข้าถึงหน้า dashboard
+checkPageAccess(PAGE_MANAGE_USERS);
 ?>
 
 <!DOCTYPE html>

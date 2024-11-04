@@ -1,7 +1,11 @@
-<?php 
+<?php
 session_start();
 require_once '../config/config.php';
+require_once '../includes/auth.php';
 include '../components/Menu.php';
+
+// ตรวจสอบสิทธิ์การเข้าถึงหน้า dashboard
+checkPageAccess(PAGE_DASHBOARD);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -128,7 +132,7 @@ include '../components/Menu.php';
                         <div class="text-right">
                             <p class="text-sm font-medium text-gray-500">ค่าส่วนกลางค้างชำระ</p>
                             <h3 class="text-xl font-bold text-gray-800">500 บาท</h3>
-                            <p class="text-sm text-red-500">ครบกำหน�� 31 มี.ค.</p>
+                            <p class="text-sm text-red-500">ครบกำหน 31 มี.ค.</p>
                         </div>
                     </div>
                 </div>

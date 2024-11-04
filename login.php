@@ -26,9 +26,9 @@ if (isset($_POST['submit'])) {
             $stmt = $conn->prepare("
                 SELECT menu_id 
                 FROM role_permissions 
-                WHERE role_id = ?
+                WHERE role_id = :role_id
             ");
-            $stmt->execute([$user['role_id']]);
+            $stmt->execute(['role_id' => $user['role_id']]);
             $_SESSION['menu_access'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             header('Location: ./pages/dashboard.php');

@@ -1,7 +1,10 @@
 <?php 
 session_start();
 require_once '../config/config.php';
+require_once '../includes/auth.php';
 include '../components/Menu.php';
+
+checkPageAccess(PAGE_MANAGE_PAYMENT);
 ?>
 <!DOCTYPE html>
 <html lang="th">
