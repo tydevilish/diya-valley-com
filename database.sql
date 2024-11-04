@@ -65,3 +65,74 @@ INSERT INTO users (user_id, username, password, role_id, created_at) VALUES
 
 #######################################################################
 
+-- ตารางที่มีอยู่แล้ว (ปรับปรุง)
+ALTER TABLE users 
+ADD fullname VARCHAR(100),
+ADD phone VARCHAR(20),
+ADD house_no VARCHAR(20),
+ADD village VARCHAR(100),
+ADD road VARCHAR(100),
+ADD subdistrict VARCHAR(100),
+ADD district VARCHAR(100),
+ADD province VARCHAR(100),
+ADD postal_code VARCHAR(5),
+ADD profile_image VARCHAR(255);
+
+-- ตารางการแจ้งซ่อม
+CREATE TABLE maintenance_requests (
+    request_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    request_type VARCHAR(50) NOT NULL,
+    description TEXT,
+    preferred_date DATE,
+    preferred_time ENUM('morning', 'afternoon', 'evening'),
+    status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- ตารางรูปภาพการแจ้งซ่อม
+CREATE TABLE maintenance_images (
+    image_id INT PRIMARY KEY AUTO_INCREMENT,
+    request_id INT,
+    image_path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES maintenance_requests(request_id) ON DELETE CASCADE
+);
+
+-- ตารางค่าส่วนกลาง
+CREATE TABLE common_fees (
+    fee_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    amount DECIMAL(10,2) NOT NULL,
+    due_date DATE NOT NULL,
+    status ENUM('pending', 'paid', 'overdue') DEFAULT 'pending',
+    payment_date TIMESTAMP NULL,
+    payment_method VARCHAR(50),
+    payment_reference VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- ตารางการแจ้งเตือน
+CREATE TABLE notifications (
+    notification_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    type ENUM('maintenance', 'payment', 'system') NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- ตารางประวัติการดำเนินการ
+CREATE TABLE activity_logs (
+    log_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    action_type VARCHAR(50) NOT NULL,
+    action_detail TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);

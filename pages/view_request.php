@@ -1,5 +1,6 @@
 <?php 
 session_start();
+require_once '../config/config.php';
 include '../components/Menu.php';
 ?>
 
@@ -25,23 +26,6 @@ include '../components/Menu.php';
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
             </button>
-
-            <div class="flex flex-col h-full">
-                <!-- Profile Section -->
-                <div class="p-4 mb-6">
-                    <div class="flex items-center">
-                        <div class="relative flex-shrink-0">
-                            <img src="https://img5.pic.in.th/file/secure-sv1/user_avatar.png"
-                                alt="Profile"
-                                class="w-12 h-12 rounded-full border-2 border-white shadow-md hover:scale-105 transition-transform duration-200">
-                        </div>
-                        <div class="ml-4">
-                            <h3 class="text-white font-semibold text-sm opacity-0 transition-opacity duration-500 ease-in-out whitespace-nowrap">คุณทวีศักดิ์ นำมา</h3>
-                            <p class="text-blue-100 text-xs opacity-0 transition-opacity duration-500 ease-in-out whitespace-nowrap">Users</p>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Menu Section -->
                 <?php renderMenu(); ?>
             </div>

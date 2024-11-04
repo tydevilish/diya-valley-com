@@ -1,9 +1,34 @@
 <?php   
 function renderMenu($currentPage = '') {
+    global $conn;
+
     // เช็คว่ามีการ login หรือไม่
     if (!isset($_SESSION['user_id'])) {
         header('Location: ../logout.php');
         exit();
+    }
+
+    // ดึงข้อมูลผู้ใช้และบทบาท
+    try {
+        $stmt = $conn->prepare("
+            SELECT u.fullname, u.profile_image, r.role_name 
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.role_id 
+            WHERE u.user_id = :user_id
+        ");
+        $stmt->execute(['user_id' => $_SESSION['user_id']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // ถ้าไม่มีรูปโปรไฟล์ ใช้รูปเริ่มต้น
+        $profileImage = !empty($user['profile_image']) ? $user['profile_image'] : 'https://img5.pic.in.th/file/secure-sv1/user_avatar.png';
+        
+    } catch(PDOException $e) {
+        // ถ้าเกิดข้อผิดพลาด ใช้ค่าเริ่มต้น
+        $user = [
+            'fullname' => 'ไม่พบข้อมูล',
+            'role_name' => 'ไม่พบข้อมูล',
+            'profile_image' => 'https://img5.pic.in.th/file/secure-sv1/user_avatar.png'
+        ];
     }
 
     $menuItems = [
@@ -50,9 +75,24 @@ function renderMenu($currentPage = '') {
     ];
 
     echo '<div class="px-3">
-            <div class="mb-4">
-                <h2 class="text-xs font-bold text-white/80 px-4 mb-2">Menu</h2>
-                <nav class="space-y-2">';
+            <!-- Profile Section -->
+            <div class="py-4 pl-1 mb-6">
+                <div class="flex items-center">
+                    <div class="relative flex-shrink-0">
+                        <img src="'.$profileImage.'"
+                            alt="Profile"
+                            class="w-12 h-12 rounded-full border-2 border-white shadow-md hover:scale-105 transition-transform duration-200">
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-white font-semibold text-sm opacity-0 transition-opacity duration-500 ease-in-out whitespace-nowrap">'.htmlspecialchars($user['fullname']).'</h3>
+                        <p class="text-blue-100 text-xs opacity-0 transition-opacity duration-500 ease-in-out whitespace-nowrap">'.htmlspecialchars($user['role_name']).'</p>
+                    </div>
+                </div>
+            </div>';
+
+    echo '<div class="mb-4">
+            <h2 class="text-xs font-bold text-white/80 px-4 mb-2">Menu</h2>
+            <nav class="space-y-2">';
 
     // ดึงสิทธิ์การเข้าถึงเมนูจาก session
     $menuAccess = $_SESSION['menu_access'] ?? [];

@@ -1,5 +1,6 @@
 <?php 
 session_start();
+require_once '../config/config.php';
 include '../components/Menu.php';
 ?>
 <!DOCTYPE html>
@@ -43,27 +44,9 @@ include '../components/Menu.php';
                 </svg>
             </button>
 
-            <div class="flex flex-col h-full">
-                <!-- Profile Section -->
-                <div class="p-4 mb-6">
-                    <div class="flex items-center">
-                        <div class="relative flex-shrink-0">
-                            <img src="https://img5.pic.in.th/file/secure-sv1/user_avatar.png"
-                                alt="Profile"
-                                class="w-12 h-12 rounded-full border-2 border-white shadow-md hover:scale-105 transition-transform duration-200">
-                        </div>
-                        <div class="ml-4">
-                            <h3 class="text-white font-semibold text-sm opacity-0 transition-opacity duration-500 ease-in-out whitespace-nowrap">คุณทวีศักดิ์ นำมา</h3>
-                            <p class="text-blue-100 text-xs opacity-0 transition-opacity duration-500 ease-in-out whitespace-nowrap">Users</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Menu Section -->
-                <?php renderMenu(); ?>
-            </div>
+            <!-- ลบ Profile Section ที่ซ้ำซ้อนออก และใช้ renderMenu() อย่างเดียว -->
+            <?php renderMenu(); ?>
         </div>
-
     </div>
 
     <!-- Main Content -->
@@ -145,7 +128,7 @@ include '../components/Menu.php';
                         <div class="text-right">
                             <p class="text-sm font-medium text-gray-500">ค่าส่วนกลางค้างชำระ</p>
                             <h3 class="text-xl font-bold text-gray-800">500 บาท</h3>
-                            <p class="text-sm text-red-500">ครบกำหนด 31 มี.ค.</p>
+                            <p class="text-sm text-red-500">ครบกำหน�� 31 มี.ค.</p>
                         </div>
                     </div>
                 </div>
