@@ -6,6 +6,12 @@ include '../components/Menu.php';
 
 // ตรวจสอบสิทธิ์การเข้าถึงหน้า dashboard
 checkPageAccess(PAGE_DASHBOARD);
+
+// ดึงข้อมูลผู้ใช้จากฐานข้อมูล
+$user_id = $_SESSION['user_id'];
+$stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -157,13 +163,13 @@ checkPageAccess(PAGE_DASHBOARD);
                                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
                                         <input type="text" name="fullname"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="ทวีศักดิ์ นำมา">
+                                            value="<?php echo htmlspecialchars($user['fullname']); ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
                                         <input type="tel" name="phone"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="081-234-5678">
+                                            value="<?php echo $user['phone']; ?>">
                                     </div>
                                 </div>
                             </div>
@@ -181,43 +187,43 @@ checkPageAccess(PAGE_DASHBOARD);
                                         <label class="block text-sm font-medium text-gray-700 mb-1">บ้านเลขที่</label>
                                         <input type="text" name="house_no"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="123/456">
+                                            value="<?php echo $user['house_no']; ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">หมู่บ้าน/อาคาร</label>
                                         <input type="text" name="village"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="Diya Valley">
+                                            value="<?php echo $user['village']; ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">ถนน</label>
                                         <input type="text" name="road"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="พหลโยธิน">
+                                            value="<?php echo $user['road']; ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">ตำบล/แขวง</label>
                                         <input type="text" name="subdistrict"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="คลองหนึ่ง">
+                                            value="<?php echo $user['subdistrict']; ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">อำเภอ/เขต</label>
                                         <input type="text" name="district"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="คลองหลวง">
+                                            value="<?php echo $user['district']; ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด</label>
                                         <input type="text" name="province"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="ปทุมธานี">
+                                            value="<?php echo $user['province']; ?>">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">รหัสไปรษณีย์</label>
                                         <input type="text" name="postal_code"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="12120">
+                                            value="<?php echo $user['postal_code']; ?>">
                                     </div>
                                 </div>
                             </div>

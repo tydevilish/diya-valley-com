@@ -6,6 +6,167 @@ include '../components/Menu.php';
 
 // ตรวจสอบสิทธิ์การเข้าถึงหน้า dashboard
 checkPageAccess(PAGE_PAYMENT);
+
+// เพิ่มฟังก์ชันสำหรับดึงข้อมูลการชำระเงินของผู้ใช้
+function getUserPayments($user_id) {
+    global $conn;
+    
+    $sql = "SELECT pt.*, p.title, p.created_at 
+            FROM payment_transactions pt
+            INNER JOIN payments p ON pt.payment_id = p.payment_id
+            WHERE pt.user_id = :user_id
+            ORDER BY p.created_at DESC";
+            
+    $stmt = $conn->prepare($sql);
+    $stmt->execute([':user_id' => $user_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// เพิ่มฟังก์ชันสำหรับนับจำนวนรายการที่ยังไม่ได้ชำระ
+function getUnpaidCount($user_id) {
+    global $conn;
+    
+    $sql = "SELECT COUNT(*) as count 
+            FROM payment_transactions 
+            WHERE user_id = :user_id 
+            AND status = 'pending'";
+            
+    $stmt = $conn->prepare($sql);
+    $stmt->execute([':user_id' => $user_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+}
+
+// ดึงข้อมูลการชำระเงินของผู้ใช้
+$user_id = $_SESSION['user_id'];
+$payments = getUserPayments($user_id);
+$unpaid_count = getUnpaidCount($user_id);
+
+// ย้ายไปไว้ด้านบนสุดของไฟล์ หลัง session_start()
+if (isset($_POST['action']) && $_POST['action'] == 'submit_payment') {
+    header('Content-Type: application/json');
+    $response = ['status' => 'error', 'message' => ''];
+    
+    try {
+        if (!isset($_POST['payment_id'])) {
+            throw new Exception('ไม่พบข้อมูล payment_id');
+        }
+        
+        $payment_id = $_POST['payment_id'];
+        $user_id = $_SESSION['user_id'];
+        
+        // Debug
+        error_log("Payment ID: " . $payment_id);
+        error_log("User ID: " . $user_id);
+        error_log("Files: " . print_r($_FILES, true));
+        
+        // ตรวจสอบไฟล์
+        if (!isset($_FILES['slip']) || $_FILES['slip']['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('กรุณาอัพโหลดสลิปการอนเงิน');
+        }
+
+        $file = $_FILES['slip'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            throw new Exception('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, GIF)');
+        }
+
+        // สร้างชื่อไฟล์ใหม่
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $newFileName = uniqid() . '_' . time() . '.' . $extension;
+        $uploadPath = '../uploads/slips/' . $newFileName;
+
+        // สร้างโฟลเดอร์
+        if (!file_exists('../uploads/slips/')) {
+            if (!mkdir('../uploads/slips/', 0777, true)) {
+                throw new Exception('ไม่สามารถสร้างโฟลเดอร์สำหรับเก็บไฟล์ได้');
+            }
+        }
+
+        // อัพโหลดไฟล์
+        if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+            throw new Exception('ไม่สามารถอัพโหลดไฟล์ได้');
+        }
+
+        // อัพเดทฐานข้อมูล
+        $sql = "UPDATE payment_transactions 
+                SET slip_image = :slip_image,
+                    payment_date = NOW(),
+                    status = 'approved'
+                WHERE payment_id = :payment_id 
+                AND user_id = :user_id";
+                
+        $stmt = $conn->prepare($sql);
+        $result = $stmt->execute([
+            ':slip_image' => $newFileName,
+            ':payment_id' => $payment_id,
+            ':user_id' => $user_id
+        ]);
+
+        if (!$result) {
+            throw new Exception('ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้');
+        }
+
+        if ($stmt->rowCount() === 0) {
+            throw new Exception('ไม่พบรายการชำระเงินที่ต้องการอัพเดท');
+        }
+
+        $response['status'] = 'success';
+        $response['message'] = 'ชำระเงินเรียบร้อยแล้ว';
+        
+    } catch (Exception $e) {
+        error_log("Error in submit_payment: " . $e->getMessage());
+        $response['message'] = $e->getMessage();
+    }
+    
+    echo json_encode($response);
+    exit;
+}
+
+// เพิ่มที่ด้านบนของไฟล์ ก่อนส่วน HTML
+if (isset($_GET['action']) && $_GET['action'] == 'get_payment_detail') {
+    header('Content-Type: application/json');
+    $response = ['status' => 'error', 'message' => ''];
+    
+    try {
+        if (!isset($_GET['payment_id'])) {
+            throw new Exception('ไม่พบข้อมูล payment_id');
+        }
+        
+        $payment_id = $_GET['payment_id'];
+        $user_id = $_SESSION['user_id'];
+        
+        $sql = "SELECT pt.*, p.title 
+                FROM payment_transactions pt
+                INNER JOIN payments p ON pt.payment_id = p.payment_id
+                WHERE pt.payment_id = :payment_id 
+                AND pt.user_id = :user_id";
+                
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([
+            ':payment_id' => $payment_id,
+            ':user_id' => $user_id
+        ]);
+        
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$payment) {
+            throw new Exception('ไม่พบข้อมูลการชำระเงิน');
+        }
+
+        // แปลงวันที่ให้อยู่ในรูปแบบที่ต้องการ
+        $payment['payment_date'] = date('d/m/Y H:i', strtotime($payment['payment_date']));
+        
+        $response['status'] = 'success';
+        $response['payment'] = $payment;
+        
+    } catch (Exception $e) {
+        $response['message'] = $e->getMessage();
+    }
+    
+    echo json_encode($response);
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -78,21 +239,30 @@ checkPageAccess(PAGE_PAYMENT);
                         <div id="notificationDropdown" class="hidden absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-xl z-50">
                             <div class="p-4">
                                 <div class="space-y-4">
-                                    <!-- รายการแจ้งเตือน -->
-                                    <a href="payment.php" class="block p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0">
-                                                <svg class="w-6 h-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <rect x="2" y="5" width="20" height="14" rx="2" />
-                                                    <line x1="2" y1="10" x2="22" y2="10" />
-                                                </svg>
-                                            </div>
-                                            <div class="ml-3">
-                                                <p class="text-sm font-medium text-gray-800">ค่าส่วนกลางประจำเดือนมีนาคม 2567</p>
-                                                <p class="text-xs text-gray-500">รอการชำระเงิน 500 บาท</p>
-                                            </div>
+                                    <?php if ($unpaid_count > 0): ?>
+                                        <?php foreach($payments as $payment): ?>
+                                            <?php if ($payment['status'] == 'pending'): ?>
+                                            <a href="payment.php" class="block p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <svg class="w-6 h-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <rect x="2" y="5" width="20" height="14" rx="2" />
+                                                            <line x1="2" y1="10" x2="22" y2="10" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="ml-3">
+                                                        <p class="text-sm font-medium text-gray-800"><?= htmlspecialchars($payment['title']) ?></p>
+                                                        <p class="text-xs text-gray-500">รอการชำระเงิน <?= number_format($payment['amount'], 2) ?> บาท</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <div class="p-3 text-center text-gray-500">
+                                            ไม่มีรายการที่ต้องชำระ
                                         </div>
-                                    </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -136,30 +306,54 @@ checkPageAccess(PAGE_PAYMENT);
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">01/03/2024</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">ค่าส่วนกลางประจำเดือนมีนาคม 2567</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">500.00</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">รอชำระเงิน</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="showModal()" class="text-blue-600 hover:text-blue-900 mr-3">ชำระเงิน</button>
-                                </td>
-                            </tr>
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">01/02/2024</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">ค่าส่วนกลางประจำเดือนกุมภาพันธ์ 2567</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">500.00</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">ชำระแล้ว</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button onclick="showDetailModal()" class="text-gray-600 hover:text-gray-900">รายละเอียด</button>
-                                </td>
-                            </tr>
+                            <?php if (empty($payments)): ?>
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                        <div class="flex flex-col items-center">
+                                            <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <p class="text-lg font-medium">ไม่พบรายการ</p>
+                                            <p class="text-sm text-gray-400">ยังไม่มีรายการค่าสวนกลาง</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php else: 
+                                $i = 1;
+                                foreach($payments as $payment): 
+                                    $status_class = $payment['status'] == 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                                    $status_text = $payment['status'] == 'pending' ? 'รอชำระเงิน' : 'ชำระแล้ว';
+                            ?>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?= $i++ ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <?= date('d/m/Y', strtotime($payment['created_at'])) ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?= htmlspecialchars($payment['title']) ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?= number_format($payment['amount'], 2) ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?= $status_class ?>">
+                                            <?= $status_text ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <?php if ($payment['status'] == 'pending'): ?>
+                                            <button onclick="showModal(<?= $payment['payment_id'] ?>)" 
+                                                    class="text-blue-600 hover:text-blue-900 mr-3">
+                                                ชำระเงิน
+                                            </button>
+                                        <?php else: ?>
+                                            <button onclick="showDetailModal(<?= $payment['payment_id'] ?>)" 
+                                                    class="text-gray-600 hover:text-gray-900">
+                                                รายละเอียด
+                                            </button>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php 
+                                endforeach;
+                            endif; 
+                            ?>
                         </tbody>
                     </table>
                 </div>
@@ -188,6 +382,9 @@ checkPageAccess(PAGE_PAYMENT);
                             <li>พร้อมเพย์: 089-123-4567</li>
                         </ul>
                     </div>
+
+                    <!-- เพิ่ม input hidden สำหรับเก็บ payment_id -->
+                    <input type="hidden" id="currentPaymentId">
 
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -237,11 +434,9 @@ checkPageAccess(PAGE_PAYMENT);
                     <div class="bg-gray-50 p-4 rounded-lg mb-4">
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div class="text-gray-600">วันที่ชำระ:</div>
-                            <div class="font-medium">01/02/2024 10:30</div>
+                            <div id="payment_date" class="font-medium"></div>
                             <div class="text-gray-600">จำนวนเงิน:</div>
-                            <div class="font-medium">500.00 บาท</div>
-                            <div class="text-gray-600">ช่องทางการชำระ:</div>
-                            <div class="font-medium">โอนผ่านธนาคารกสิกรไทย</div>
+                            <div id="payment_amount" class="font-medium"></div>
                         </div>
                     </div>
 
@@ -250,7 +445,7 @@ checkPageAccess(PAGE_PAYMENT);
                             สลิปการโอนเงิน
                         </label>
                         <div class="mt-1 flex justify-center">
-                            <img src="https://img2.pic.in.th/pic/462554817_573567848662882_2984175964874345892_n.jpg" alt="สลิปการโอนเงิน" class="max-h-64 rounded-lg shadow-sm">
+                            <img id="slip_image" src="" alt="สลิปการโอนเงิน" class="max-h-64 rounded-lg shadow-sm">
                         </div>
                     </div>
 
@@ -265,7 +460,8 @@ checkPageAccess(PAGE_PAYMENT);
     </div>
 
     <script>
-        function showModal() {
+        function showModal(paymentId) {
+            document.getElementById('currentPaymentId').value = paymentId;
             document.getElementById('paymentModal').classList.remove('hidden');
         }
 
@@ -297,11 +493,82 @@ checkPageAccess(PAGE_PAYMENT);
         }
 
         function submitPayment() {
-            alert('ส่งข้อมูลการชำระเงินเรียบร้อย');
-            closeModal();
+            const paymentId = document.getElementById('currentPaymentId').value;
+            const slipFile = document.getElementById('slip').files[0];
+            
+            if (!slipFile) {
+                alert('กรุณาอัพโหลดสลิปการโอนเงิน');
+                return;
+            }
+
+            // Debug
+            console.log('Payment ID:', paymentId);
+            console.log('File:', slipFile);
+
+            const formData = new FormData();
+            formData.append('action', 'submit_payment');
+            formData.append('payment_id', paymentId);
+            formData.append('slip', slipFile);
+
+            // แสดง loading state
+            const confirmButton = document.getElementById('confirmPayment');
+            const originalContent = confirmButton.innerHTML;
+            confirmButton.disabled = true;
+            confirmButton.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                กำลังส่งข้อมูล...
+            `;
+
+            fetch('payment.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Debug
+                console.log('Response:', response);
+                return response.json();
+            })
+            .then(data => {
+                // Debug
+                console.log('Data:', data);
+                if(data.status === 'success') {
+                    alert('ส่งข้อมูลการชำระเงินเรียบร้อย');
+                    closeModal();
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'เกิดข้อผิดพลาดในการส่งข้อมูล');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('เกิดข้อผิดพลาดในการส่งข้อมูล');
+            })
+            .finally(() => {
+                confirmButton.disabled = false;
+                confirmButton.innerHTML = originalContent;
+            });
         }
 
-        function showDetailModal() {
+        function showDetailModal(paymentId) {
+            // เรียกข้อมูลจาก API
+            fetch(`payment.php?action=get_payment_detail&payment_id=${paymentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const payment = data.payment;
+                        document.getElementById('payment_date').textContent = payment.payment_date;
+                        document.getElementById('payment_amount').textContent = Number(payment.amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+                        document.getElementById('slip_image').src = '../uploads/slips/' + payment.slip_image;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+                });
+            
             document.getElementById('detailModal').classList.remove('hidden');
         }
 

@@ -11,6 +11,12 @@ function checkPageAccess($page_id) {
         header('Location: ../logout.php');
         exit();
     }
+
+    // เพิ่มการตรวจสอบ role_id
+    if ($page_id == PAGE_MANAGE_PAYMENT && $_SESSION['role_id'] != 1 && $_SESSION['role_id'] != 7) {
+        header('Location: ../logout.php');
+        exit();
+    }
 }
 
 // กำหนด ID ของแต่ละหน้า (ต้องตรงกับ ID ในฐานข้อมูล)
