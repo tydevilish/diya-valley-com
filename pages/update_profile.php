@@ -16,16 +16,19 @@ try {
     // รับค่าจากฟอร์ม
     $fullname = $_POST['fullname'];
     $phone = $_POST['phone'];
-    $house_no = $_POST['house_no'];
-    $village = $_POST['village'];
-    $road = $_POST['road'];
-    $subdistrict = $_POST['subdistrict'];
-    $district = $_POST['district'];
-    $province = $_POST['province'];
-    $postal_code = $_POST['postal_code'];
+    $contact_address = $_POST['contact_address'];
+    $non_contact_address = $_POST['non_contact_address'];
+    $street = $_POST['street'];
+
+    // ถ้ามีการส่งรหัสผ่านใหม่มา
+    $password_sql = '';
+    $params = [];
+    if (!empty($_POST['password'])) {
+        $password_sql = ', password = ?';
+        $params[] = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    }
 
     // จัดการอัพโหลดรูปภาพ (ถ้ามี)
-    $profile_image = null;
     if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = '../uploads/profiles/';
         if (!file_exists($upload_dir)) {
@@ -37,31 +40,24 @@ try {
         $upload_path = $upload_dir . $new_filename;
 
         if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $upload_path)) {
-            $profile_image = $new_filename;
+            $password_sql .= ', profile_image = ?';
+            $params[] = $upload_path;
         }
     }
 
     // อัพเดทข้อมูลในฐานข้อมูล
     $sql = "UPDATE users SET 
-            fullname = ?, 
+            fullname = ?,
             phone = ?,
-            house_no = ?,
-            village = ?,
-            road = ?,
-            subdistrict = ?,
-            district = ?,
-            province = ?,
-            postal_code = ?";
+            contact_address = ?,
+            non_contact_address = ?,
+            street = ?
+            $password_sql
+            WHERE user_id = ?";
     
-    $params = [$fullname, $phone, $house_no, $village, $road, $subdistrict, $district, $province, $postal_code];
-
-    // เพิ่ม profile_image เข้าไปในคำสั่ง SQL ถ้ามีการอัพโหลดรูป
-    if ($profile_image) {
-        $sql .= ", profile_image = ?";
-        $params[] = $profile_image;
-    }
-
-    $sql .= " WHERE user_id = ?";
+    // เพิ่มพารามิเตอร์พื้นฐาน
+    array_unshift($params, $fullname, $phone, $contact_address, $non_contact_address, $street);
+    // เพิ่ม user_id เป็นพารามิเตอร์สุดท้าย
     $params[] = $user_id;
 
     $stmt = $conn->prepare($sql);
@@ -73,6 +69,7 @@ try {
     ]);
 
 } catch (Exception $e) {
+    http_response_code(500);
     echo json_encode([
         'status' => 'error',
         'message' => $e->getMessage()

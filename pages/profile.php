@@ -126,7 +126,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
         </nav>
 
         <!-- Profile Edit Form -->
-        <div class="container mx-auto px-4 py-5 lg:py-36">
+        <div class="container mx-auto px-4 py-5 lg:py-11">
             <div class="bg-white rounded-xl shadow-lg p-6 max-w-7xl mx-auto">
                 <form action="update_profile.php" method="POST" enctype="multipart/form-data">
                     <!-- Profile Section -->
@@ -134,12 +134,12 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
                         <!-- Left Side - Profile Image -->
                         <div class="lg:w-1/4">
                             <div class="relative">
-                                <img src="https://img5.pic.in.th/file/secure-sv1/user_avatar.png"
+                                <img src="<?php echo !empty($user['profile_image']) ? $user['profile_image'] : 'https://img5.pic.in.th/file/secure-sv1/user_avatar.png'; ?>"
                                     class="w-full aspect-square rounded-xl object-cover shadow-lg border-4 border-blue-500"
                                     id="preview-image"
                                     alt="Profile picture">
                                 <label class="absolute bottom-2 right-2 cursor-pointer bg-blue-500 rounded-full p-2 shadow-lg hover:bg-blue-600 transition-colors">
-                                    <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen-fill" viewBox="0 0 16 16">
+                                    <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
                                         <path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001" />
                                     </svg>
                                     <input type="file" name="profile_image" class="hidden" accept="image/*"
@@ -150,11 +150,34 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                         <!-- Right Side - Form Fields -->
                         <div class="lg:w-3/4">
-                            <!-- Personal Info -->
+                            <!-- Account Info -->
                             <div class="mb-8">
                                 <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                    </svg>
+                                    ข้อมูลบัญชี
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้</label>
+                                        <input type="text" name="username" readonly
+                                            class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                                            value="<?php echo htmlspecialchars($user['username']); ?>">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                                        <input type="password" name="password" placeholder="ใส่รหัสผ่านใหม่หากต้องการเปลี่ยน"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Personal Info -->
+                            <div class="mb-8">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                                     </svg>
                                     ข้อมูลส่วนตัว
                                 </h3>
@@ -169,61 +192,37 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
                                         <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
                                         <input type="tel" name="phone"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['phone']; ?>">
+                                            value="<?php echo htmlspecialchars($user['phone']); ?>">
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Address -->
-                            <div>
+                            <!-- Contact Address -->
+                            <div class="mb-8">
                                 <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                                     </svg>
-                                    ข้อมูลที่อยู่
+                                    ที่อยู่ติดต่อ
                                 </h3>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                <div class="space-y-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">บ้านเลขที่</label>
-                                        <input type="text" name="house_no"
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">ที่อยู่ตามทะเบียนบ้าน</label>
+                                        <textarea name="contact_address" rows="3"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['house_no']; ?>">
+                                        ><?php echo htmlspecialchars($user['contact_address']); ?></textarea>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">หมู่บ้าน/อาคาร</label>
-                                        <input type="text" name="village"
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">ที่อยู่ปัจจุบัน</label>
+                                        <textarea name="non_contact_address" rows="3"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['village']; ?>">
+                                        ><?php echo htmlspecialchars($user['non_contact_address']); ?></textarea>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">ถนน</label>
-                                        <input type="text" name="road"
+                                        <input type="text" name="street"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['road']; ?>">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">ตำบล/แขวง</label>
-                                        <input type="text" name="subdistrict"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['subdistrict']; ?>">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">อำเภอ/เขต</label>
-                                        <input type="text" name="district"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['district']; ?>">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด</label>
-                                        <input type="text" name="province"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['province']; ?>">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัสไปรษณีย์</label>
-                                        <input type="text" name="postal_code"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value="<?php echo $user['postal_code']; ?>">
+                                            value="<?php echo htmlspecialchars($user['street']); ?>">
                                     </div>
                                 </div>
                             </div>
